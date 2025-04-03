@@ -6,7 +6,7 @@ import graphene
 from contract.tests.helpers import *
 from contract.models import Contract, ContractDetails
 from core.models import TechnicalUser
-from core.models.openimis_graphql_test_case import openIMISGraphQLTestCase
+from core.models.openimis_graphql_test_case import openIMISGraphQLTestCase, BaseTestContext
 from core.test_helpers import create_test_interactive_user
 from policyholder.tests.helpers import *
 from contribution_plan.tests.helpers import create_test_contribution_plan, \
@@ -30,9 +30,6 @@ class QueryTestContract(openIMISGraphQLTestCase):
             query=payment_schema.Query,
     )
 
-    class BaseTestContext:
-        def __init__(self, user):
-            self.user = user
 
     class AnonymousUserContext:
         user = mock.Mock(is_anonymous=True)
@@ -44,7 +41,7 @@ class QueryTestContract(openIMISGraphQLTestCase):
         if not cls.user:
             cls.user=create_test_interactive_user(username='admin')
         # some test data so as to created contract properly
-        cls.user_token = get_token(cls.user, cls.BaseTestContext(user=cls.user))
+        cls.user_token = BaseTestContext(user=cls.user).get_jwt()
         
     def test_query_payment_additionnal_filter(self):
         response = self.query(
