@@ -63,9 +63,7 @@ class PaymentServiceTestCase(TestCase):
         product = create_test_product("ELI1")
         (policy, insuree_policy) = create_test_policy2(product, insuree, custom_props={
             "value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
+
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -83,9 +81,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -97,9 +92,6 @@ class PaymentServiceTestCase(TestCase):
         product = create_test_product("ELI1")
         (policy, insuree_policy) = create_test_policy2(product, insuree, custom_props={
             "value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=None,
@@ -115,9 +107,7 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
+
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -129,9 +119,6 @@ class PaymentServiceTestCase(TestCase):
         product = create_test_product("ELI1")
         (policy, insuree_policy) = create_test_policy2(product, insuree, custom_props={
             "value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -147,9 +134,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -160,10 +144,7 @@ class PaymentServiceTestCase(TestCase):
         insuree = create_test_insuree(custom_props={"chf_id": "paysimp"})
         product = create_test_product("ELI1")
         (policy, insuree_policy) = create_test_policy2(product, insuree, custom_props={
-            "value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
+            "value": 1000, "status": Policy.STATUS_IDLE})        
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code="xxxxxx",
@@ -179,9 +160,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -194,9 +172,6 @@ class PaymentServiceTestCase(TestCase):
         (policy, insuree_policy) = create_test_policy2(
             product, insuree, valid=False,  # !! INVALID POLICY
             custom_props={"value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -212,9 +187,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -230,9 +202,6 @@ class PaymentServiceTestCase(TestCase):
         (policy, insuree_policy) = create_test_policy2(
             product, insuree,
             custom_props={"value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -248,9 +217,7 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
+       
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -266,9 +233,7 @@ class PaymentServiceTestCase(TestCase):
         (policy, insuree_policy) = create_test_policy2(
             product, insuree,
             custom_props={"value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
+
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -284,9 +249,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
@@ -298,9 +260,6 @@ class PaymentServiceTestCase(TestCase):
         product = create_test_product("ELI1")
         (policy, insuree_policy) = create_test_policy2(product, insuree, custom_props={
             "value": 1000, "status": Policy.STATUS_IDLE})
-        service = create_test_service("A")
-        svc_pl_detail = add_service_to_hf_pricelist(service)
-        product_service = create_test_product_service(product, service, custom_props={"limit_no_adult": 20})
         premium = create_test_premium(policy_id=policy.id, with_payer=False)
         payment, payment_detail = create_test_payment2(
             insuree_code=insuree.chf_id,
@@ -316,9 +275,6 @@ class PaymentServiceTestCase(TestCase):
         payment_detail.delete()
         payment.delete()
         premium.delete()
-        product_service.delete()
-        svc_pl_detail.delete()
-        service.delete()
         policy.insuree_policies.all().delete()
         policy.delete()
         product.delete()
