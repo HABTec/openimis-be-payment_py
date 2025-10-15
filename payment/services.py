@@ -72,7 +72,7 @@ def reset_payment_before_update(payment):
     payment.transfer_fee = None
 
 
-def update_or_create_payment(data, user):
+def update_or_create_payment(data, user , matching=False):
     if "client_mutation_id" in data:
         data.pop('client_mutation_id')
     if "client_mutation_label" in data:
@@ -84,6 +84,16 @@ def update_or_create_payment(data, user):
     data.pop("rejected_reason", None)
     data['validity_from'] = now
     payment_uuid = data.pop("uuid") if "uuid" in data else None
+    if matching and payment_uuid:
+        payment = Payment.objects.get(uuid=payment_uuid)
+        payment.save_history()
+        reset_payment_before_update(payment)
+        payment.receipt_no = data.get('receipt_no')
+        payment.origin = data.get('origin')
+        payment.received_amount = data.get('received_amount')
+        payment.status = data.get('status')
+        payment.received_date = data.get('received_date')
+        payment.save()
     if payment_uuid:
         payment = Payment.objects.get(uuid=payment_uuid)
         payment.save_history()

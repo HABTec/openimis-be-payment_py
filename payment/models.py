@@ -124,6 +124,14 @@ class PaymentDetail(core_models.VersionedModel):
         return f"id:{self.id}, payment:{self.payment_id}, ins_nb:{self.insurance_number}, amount:{self.amount}, " \
                f"premium:{self.premium_id}"
 
+class UnmatchedOfflinePayments(models.Model):
+    id = models.BigAutoField(db_column='id', primary_key=True)
+
+    details = models.JSONField(db_column='Details', blank=False, null=False)
+    error_message = models.TextField(db_column='ErrorMessage', blank=False, null=False)
+    class Meta:
+        managed = True
+        db_table = 'UnmatchedOfflinePayments'
 
 class PaymentMutation(core_models.UUIDModel, core_models.ObjectMutation):
     payment = models.ForeignKey(
