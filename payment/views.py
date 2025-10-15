@@ -54,11 +54,11 @@ def handle_matching_payment(request):
                 "receipt_no": tx.get('orderId'),
                 "origin": tx.get('paymentMethod'),
                 "received_amount": str(amount) if amount is not None else None,
-                "status": Payment.STATUS_POSTED,
+                "status": Payment.STATUS_PAYMENTMATCHED,
                 "received_date": received_date_str,
             }
 
-            payment = update_or_create_payment(payload, request.user if hasattr(request, 'user') else payload)
+            payment = update_or_create_payment(payload, request.user if hasattr(request, 'user') else payload , matching=True)
 
         except Exception as exc:
             error_msg = str(exc)
