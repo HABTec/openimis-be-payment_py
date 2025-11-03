@@ -10,12 +10,13 @@ from payment.services import update_or_create_payment
 @api_view(['POST'])
 def handle_matching_payment(request):
     body = request.data or {}
-    transactions = body.get('OfflineTransactions', []) or []
-
+    body = {k.lower(): v for k, v in body.items()}
+    transactions = body.get('offlinetransactions', []) or []
+    transactions = [{k.lower(): v.lower() for k, v in obj.items()} for obj in transactions]
     for idx, tx in enumerate(transactions):
         try:
-            status = (tx.get('status') or '').upper()
-            if status != 'SUCCESS':
+            status = (tx.get('status') or '')
+            if status != 'success':
                 continue
 
             amount_raw = tx.get('amount')
@@ -29,7 +30,7 @@ def handle_matching_payment(request):
                 )
                 continue
 
-            created_at_str = tx.get('createdAt') or tx.get('updatedAt')
+            created_at_str = tx.get('createdat') or tx.get('updatedat')
             received_date_str = date.today().strftime("%Y-%m-%d")
             if created_at_str:
                 try:
@@ -40,7 +41,7 @@ def handle_matching_payment(request):
                     received_date_str = dt.date().strftime("%Y-%m-%d")
                 except Exception:
                     pass
-            matchingPaymentId = tx.get('matchingPaymentId')
+            matchingPaymentId = tx.get('matchingpaymentid')
             matchedPayment = Payment.objects.get(id=matchingPaymentId) if matchingPaymentId else None
             if not matchedPayment:
                 error_msg = f"Matching payment not found: {matchingPaymentId}"
@@ -51,8 +52,8 @@ def handle_matching_payment(request):
                 continue
             payload = {
                 "uuid": matchedPayment.uuid if matchedPayment else None,
-                "receipt_no": tx.get('orderId'),
-                "origin": tx.get('paymentMethod'),
+                "receipt_no": tx.get('orderid'),
+                "origin": tx.get('paymentmethod'),
                 "received_amount": str(amount) if amount is not None else None,
                 "status": Payment.STATUS_PAYMENTMATCHED,
                 "received_date": received_date_str,
