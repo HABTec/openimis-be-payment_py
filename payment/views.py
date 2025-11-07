@@ -6,6 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from payment.models import Payment, UnmatchedOfflinePayments
 from payment.services import update_or_create_payment
+from core.schema import  filter_validity
 
 @api_view(['POST'])
 def handle_matching_payment(request):
@@ -20,6 +21,7 @@ def handle_matching_payment(request):
                 continue
 
             amount_raw = tx.get('amount')
+            receipt_no = tx.get('orderid')
             try:
                 amount = Decimal(str(amount_raw)) if amount_raw is not None else None
             except (InvalidOperation, TypeError):
@@ -42,9 +44,12 @@ def handle_matching_payment(request):
                 except Exception:
                     pass
             matchingPaymentId = tx.get('matchingpaymentid')
-            matchedPayment = Payment.objects.get(id=matchingPaymentId) if matchingPaymentId else None
+            if matchingPaymentId:
+                matchedPayment = Payment.objects.get(id=matchingPaymentId)
+            elif amount and receipt_no:
+                matchedPayment = Payment.objects.filter(receipt_no=receipt_no, *filter_validity())[0]
             if not matchedPayment:
-                error_msg = f"Matching payment not found: {matchingPaymentId}"
+                error_msg = f"Matching payment not found: {matchingPaymentId if matchingPaymentId else receipt_no}"
                 UnmatchedOfflinePayments.objects.create(
                     details=tx,
                     error_message=error_msg
@@ -52,7 +57,7 @@ def handle_matching_payment(request):
                 continue
             payload = {
                 "uuid": matchedPayment.uuid if matchedPayment else None,
-                "receipt_no": tx.get('orderid'),
+                "receipt_no": receipt_no,
                 "origin": tx.get('paymentmethod'),
                 "received_amount": str(amount) if amount is not None else None,
                 "status": Payment.STATUS_PAYMENTMATCHED,
