@@ -10,13 +10,15 @@ from insuree.models import Insuree
 from location.apps import LocationConfig
 from location.models import LocationManager
 from payment.apps import PaymentConfig
-from payment.models import Payment, PaymentDetail
+from payment.models import Payment, PaymentDetail, MatchingPaymentIdReservation, ReservationStatus
 from policy.apps import PolicyConfig
 from policy.models import Policy
 from policy.services import update_insuree_policies
 from policy.values import policy_values, set_start_date, set_expiry_date
 from product.models import Product
 from core.models.user import User
+from django.core.exceptions import ValidationError
+from django.db import transaction
 
 logger = logging.getLogger(__file__)
 
@@ -83,6 +85,7 @@ def update_or_create_payment(data, user , matching=False):
     # data['audit_user_id'] = user.id_for_audit
     data.pop("rejected_reason", None)
     data['validity_from'] = now
+
     payment_uuid = data.pop("uuid") if "uuid" in data else None
     if matching and payment_uuid:
         payment = Payment.objects.get(uuid=payment_uuid)
@@ -101,6 +104,10 @@ def update_or_create_payment(data, user , matching=False):
         [setattr(payment, k, v) for k, v in data.items()]
         payment.save()
     else:
+        reserved_chf_id = data.pop('reserved_payment_id', None)
+        data.pop("rejected_reason", None)
+        if reserved_chf_id:
+            PaymentIdReservationService(user).assert_available_and_assign_to_payload(reserved_chf_id, data)
         payment = Payment.objects.create(**data)
     return payment
 
@@ -427,4 +434,136 @@ def validate_payment_detail(pd):
     pd.latest_premium = latest_premium
     pd.product = product
     return errors
+
+def generate_unique_chf_id() -> str:
+    import random
+    rng = random.SystemRandom()
+    while True:
+        candidate = f"{rng.randint(100000000, 999999999)}"  # 9 digits
+        # Must not collide with active insurees nor with reserved-but-unused IDs
+        exists_in_insuree = Insuree.objects.filter(chf_id=candidate, validity_to__isnull=True).exists()
+        exists_in_reserved = MatchingPaymentIdReservation.objects.filter(
+            chf_id=candidate, status=ReservationStatus.RESERVED, validity_to__isnull=True
+        ).exists()
+        if not exists_in_insuree and not exists_in_reserved:
+            return candidate
+
+class PaymentIdReservationService:
+    def __init__(self, user):
+        self.user = user
+
+    def _current_hf_id(self):
+        try:
+            i_user = getattr(self.user, 'i_user', None)
+            return getattr(i_user, 'health_facility_id', None) if i_user else None
+        except Exception:
+            return None
+
+    def _current_officer(self):
+        try:
+            from core.models import Officer
+            i_user = getattr(self.user, 'i_user', None)
+            if i_user:
+                officer = getattr(i_user, 'officer', None)
+                if officer:
+                    return officer
+                off = Officer.objects.filter(user=i_user).first()
+                if off:
+                    return off
+            off = Officer.objects.filter().first()
+            return off
+        except Exception:
+            return None
+
+    def reserve_new(self, amount: int) -> list:
+        if amount <= 0:
+            return []
+        hf_id = self._current_hf_id()
+        officer = self._current_officer()
+        reserved = []
+        for _ in range(amount):
+            chf_id = generate_unique_chf_id()
+            obj = MatchingPaymentIdReservation(
+                chf_id=chf_id,
+                reserved_hf_id=hf_id,
+                reserved_officer=officer,
+                reserved_by_user_id=getattr(self.user, 'id_for_audit', 0),
+                status=ReservationStatus.RESERVED,
+                audit_user_id=getattr(self.user, 'id_for_audit', 0),
+            )
+            obj.save()
+            reserved.append(chf_id)
+        return reserved
+
+    def get_my(self):
+        hf_id = self._current_hf_id()
+        officer = self._current_officer()
+        qs = MatchingPaymentIdReservation.objects.filter()
+        if hf_id:
+            qs = qs.filter(reserved_hf_id=hf_id)
+        if officer:
+            qs = qs.filter(reserved_officer_id=getattr(officer, 'id', None))
+        return qs.order_by('id')
+    
+    @transaction.atomic
+    def delete_reserved(self, chf_ids: list) -> int:
+        if not chf_ids:
+            return 0
+        hf_id = self._current_hf_id()
+        officer = self._current_officer()
+        qs = MatchingPaymentIdReservation.objects.select_for_update().filter(
+            chf_id__in=chf_ids,
+            status=ReservationStatus.RESERVED,
+        )
+        if hf_id:
+            qs = qs.filter(reserved_hf_id=hf_id)
+        if officer:
+            qs = qs.filter(reserved_officer_id=getattr(officer, 'id', None))
+        count = 0
+        for r in qs:
+            r.status = ReservationStatus.CANCELLED
+            r.audit_user_id = getattr(self.user, 'id_for_audit', 0)
+            r.save()
+            count += 1
+        return count
+    @transaction.atomic
+    def assert_available_and_assign_to_payload(self, reserved_chf_id: str, payload: dict):
+        existing_any = MatchingPaymentIdReservation.objects.filter(
+            chf_id=str(reserved_chf_id),
+        ).first()
+        if existing_any and existing_any.status == ReservationStatus.USED:
+            raise ValidationError(_("reserved_id_already_used"))
+
+        r = MatchingPaymentIdReservation.objects.select_for_update().filter(
+            chf_id=str(reserved_chf_id),
+            status=ReservationStatus.RESERVED,
+        ).first()
+        if not r:
+            raise ValidationError(_("reserved_id_not_available"))
+        hf_id = self._current_hf_id()
+        off = self._current_officer()
+        if (r.reserved_hf_id and hf_id and r.reserved_hf_id != hf_id) or \
+           (r.reserved_officer_id and off and r.reserved_officer_id != getattr(off, 'id', None)):
+            raise ValidationError(_("reserved_id_wrong_scope"))
+        r.status = ReservationStatus.USED
+        r.save()
+        payload['id'] = r.chf_id
+
+    @transaction.atomic
+    def mark_used(self, reserved_chf_id: str, payment: Payment):
+        r = MatchingPaymentIdReservation.objects.select_for_update().filter(
+            chf_id=str(reserved_chf_id),
+            status=ReservationStatus.RESERVED,
+        ).first()
+        if not r:
+            existing = MatchingPaymentIdReservation.objects.filter(
+                chf_id=str(reserved_chf_id),
+            ).first()
+            if existing and existing.status == ReservationStatus.USED:
+                raise ValidationError(_("reserved_id_already_used"))
+            raise ValidationError(_("reserved_id_not_available"))
+        r.status = ReservationStatus.USED
+        r.used_by_payment = payment
+        r.audit_user_id = getattr(self.user, 'id_for_audit', 0)
+        r.save()
 
