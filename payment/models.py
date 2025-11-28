@@ -5,6 +5,7 @@ from core import models as core_models
 from django.db import models
 from contribution.models import Premium, PayTypeChoices
 from django.utils.translation import gettext_lazy as _
+from location import models as location_models
 
 
 class Payment(core_models.VersionedModel):
@@ -142,3 +143,38 @@ class PaymentMutation(core_models.UUIDModel, core_models.ObjectMutation):
     class Meta:
         managed = True
         db_table = "payment_PaymentMutation"
+
+
+class ReservationStatus(models.TextChoices):
+    RESERVED = "RS", _("Reserved")
+    USED = "US", _("Used")
+    CANCELLED = "CA", _("Cancelled")
+
+
+class MatchingPaymentIdReservation(core_models.VersionedModel):
+    id = models.AutoField(primary_key=True)
+    uuid = models.CharField(max_length=36, default=uuid.uuid4, unique=True)
+
+    chf_id = models.CharField(max_length=50, unique=True, db_index=True)
+
+    # Scoping fields
+    reserved_hf = models.ForeignKey(
+        location_models.HealthFacility, models.DO_NOTHING, blank=True, null=True,
+        related_name="reserved_payment_ids"
+    )
+    reserved_officer = models.ForeignKey(
+        'core.Officer', models.DO_NOTHING, blank=True, null=True,
+        related_name="reserved_payment_ids"
+    )
+    reserved_by_user_id = models.IntegerField(blank=True, null=True)
+
+    status = models.CharField(max_length=2, choices=ReservationStatus.choices, default=ReservationStatus.RESERVED)
+    used_by_payment = models.ForeignKey(
+        Payment, models.DO_NOTHING, blank=True, null=True, related_name='used_reservations'
+    )
+    audit_user_id = models.IntegerField(db_column='AuditUserID', null=True, blank=True)
+
+    class Meta:
+        managed = True
+        db_table = 'matchingPaymentIDReservation'
+

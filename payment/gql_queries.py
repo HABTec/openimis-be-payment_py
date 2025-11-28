@@ -71,3 +71,6 @@ class PaymentDetailGQLType(DjangoObjectType):
 class PaymentMutationGQLType(DjangoObjectType):
     class Meta:
         model = PaymentMutation
+class MyReservedPaymentIdsGQLType(graphene.ObjectType):
+    reserved = graphene.List(graphene.String)
+    used = graphene.List(graphene.String)

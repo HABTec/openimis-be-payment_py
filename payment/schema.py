@@ -35,6 +35,13 @@ class Query(graphene.ObjectType):
         premium_uuids=graphene.List(graphene.String, required=True),
         orderBy=graphene.List(of_type=graphene.String),
     )
+    my_reserved_payment_ids = graphene.Field(MyReservedPaymentIdsGQLType)
+
+    def resolve_my_reserved_payment_ids(self, info, **kwargs):
+        qs = PaymentIdReservationService(info.context.user).get_my()
+        reserved = list(qs.filter(status="RS").values_list('chf_id', flat=True))
+        used = list(qs.filter(status="US").values_list('chf_id', flat=True))
+        return MyReservedPaymentIdsGQLType(reserved=reserved, used=used)
 
     def resolve_payments(self, info, **kwargs):
         if not info.context.user.has_perms(PaymentConfig.gql_query_payments_perms):
@@ -88,6 +95,7 @@ class Mutation(graphene.ObjectType):
     create_payment = CreatePaymentMutation.Field()
     update_payment = UpdatePaymentMutation.Field()
     delete_payment = DeletePaymentsMutation.Field()
+    reserve_payment_ids = ReservePaymentIdsMutation.Field()
 
 
 def bind_signals():
