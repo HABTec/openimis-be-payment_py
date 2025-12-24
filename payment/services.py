@@ -264,9 +264,27 @@ def match_payment(payment_id=None, payment=None, audit_user_id=None):
                 )
                 pd.premium = premium
                 pd.save()
+def match_payment_custom(payment_id=None, payment=None, audit_user_id=None):
+    if payment is None:
+        payment = Payment.filter_queryset().get(id=payment_id)
+    user = User.objects.filter(i_user=audit_user_id).first()
+
+    payment_details = payment.payment_details.filter(validity_to__isnull=True)
+
+    valid_pd = []
+
+    processed = {}
+    for pd in payment_details:
+
+            target_policy = pd.premium.policy
+            if target_policy:
+                target_policy.save_history()
+                target_policy.status = Policy.STATUS_ACTIVE
+                target_policy.save()
 
 
-def assign_payment_detail(pd, audit_user_id):
+
+def assign_payment__detail(pd, audit_user_id):
     # List premiums with the already paid amounts for each
     payment_details_subquery = PaymentDetail.filter_queryset()\
         .filter(premium_id=OuterRef("id")).values(amount_sum=Sum("amount"))
