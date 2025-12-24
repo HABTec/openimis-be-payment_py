@@ -112,7 +112,7 @@ def update_or_create_payment(data, user , matching=False):
     return payment
 
 
-def update_or_create_payment_detail(payment, premium_uuid, user):
+def update_or_create_payment_detail(payment, premium_uuid, user , force=False):
     premium = Premium.filter_queryset()\
         .filter(uuid=premium_uuid)\
         .select_related("policy__family__head_insuree")\
@@ -131,7 +131,7 @@ def update_or_create_payment_detail(payment, premium_uuid, user):
     payment_detail, _ = PaymentDetail.objects.update_or_create(
         payment=payment, premium_id=premium["id"],
         defaults=dict(
-            audit_user_id=user.id_for_audit,
+            audit_user_id=1 if force else user.id_for_audit,
             amount=payment.received_amount,
             product_code=premium["policy__product__code"],
             insurance_number=premium["policy__family__head_insuree__chf_id"],
